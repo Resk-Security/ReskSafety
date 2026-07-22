@@ -34,7 +34,7 @@ class ReskClient:
 
     def __init__(self, base_url: str) -> None:
         self.base = base_url.rstrip("/")
-        self._client = httpx.Client(base_url=self.base, verify=False)
+        self._client = httpx.Client(base_url=self.base, verify=True)
         self._csrf_token: str | None = None
         self._logged_in = False
 

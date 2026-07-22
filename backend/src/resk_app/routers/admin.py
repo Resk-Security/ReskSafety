@@ -312,5 +312,5 @@ def security_test(
 
 
 @router.get("/health", status_code=status.HTTP_200_OK)
-def health() -> dict:
+def health(_current: CurrentAdmin = Depends(get_current_admin)) -> dict:
     return {"status": "ok"}

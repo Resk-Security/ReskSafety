@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
-import uuid
-
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from resk_app.auth.cookies import ADMIN_COOKIE, USER_COOKIE, clear_auth_cookie, set_auth_cookie
 from resk_app.auth.dependencies import CurrentAdmin, get_current_admin
-from resk_app.auth.jwt import create_jwt, decode_jwt
-from resk_app.auth.passwords import hash_password, verify_password
+from resk_app.auth.jwt import create_jwt
+from resk_app.auth.passwords import verify_password
 from resk_app.config import get_settings
 from resk_app.db.session import get_db
+from resk_app.limiter import limiter
 from resk_app.models.user import User
 from resk_app.rbac import compute_user_mask, active_bits
-from resk_app.schemas.auth import LoginRequest, RegisterRequest, UserMeResponse, UserTokenResponse
+from resk_app.schemas.auth import LoginRequest, UserMeResponse, UserTokenResponse
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -33,41 +32,15 @@ def _user_me(user: User) -> UserMeResponse:
     )
 
 
-@router.post("/register", status_code=201)
-def register(
-    body: RegisterRequest,
-    db: Session = Depends(get_db),
-) -> UserMeResponse:
-    existing = db.scalar(select(User).where(User.username == body.username))
-    if existing is not None:
-        raise HTTPException(status_code=409, detail="Username already taken")
-    existing_email = db.scalar(select(User).where(User.email == body.email))
-    if existing_email is not None:
-        raise HTTPException(status_code=409, detail="Email already taken")
-    user = User(
-        id=uuid.uuid4(),
-        username=body.username,
-        email=body.email,
-        hashed_password=hash_password(body.password),
-        is_active=True,
-        is_admin=False,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    mask = compute_user_mask(user)
-    return UserMeResponse(
-        id=str(user.id),
-        username=user.username,
-        email=user.email,
-        is_admin=user.is_admin,
-        capabilities_mask=mask,
-        active_bits=active_bits(mask),
-    )
+@router.post("/register", status_code=403)
+def register() -> dict:
+    raise HTTPException(status_code=403, detail="Registration disabled on demo")
 
 
 @router.post("/login")
+@limiter.limit("10/minute")
 def login(
+    request: Request,
     body: LoginRequest,
     response: Response,
     db: Session = Depends(get_db),
@@ -78,15 +51,10 @@ def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
-    if not user.is_active:
+    if not user.is_active or not user.is_admin:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User disabled",
-        )
-    if not user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin only",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
         )
     mask = compute_user_mask(user)
     token, csrf = create_jwt(user.id, user.username, True, mask, token_type="admin")
@@ -100,7 +68,9 @@ def login(
 
 
 @router.post("/user-login", response_model=UserTokenResponse)
+@limiter.limit("10/minute")
 def user_login(
+    request: Request,
     body: LoginRequest,
     response: Response,
     db: Session = Depends(get_db),
@@ -113,8 +83,8 @@ def user_login(
         )
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User disabled",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
         )
     mask = compute_user_mask(user)
     token, csrf = create_jwt(user.id, user.username, user.is_admin, mask, token_type="user")

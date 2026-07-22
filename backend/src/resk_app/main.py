@@ -96,7 +96,7 @@ def create_app() -> FastAPI:
 
     @app.get("/health", tags=["meta"])
     def health() -> dict:
-        return {"status": "ok", "version": "0.1.0"}
+        return {"status": "ok"}
 
     @app.get("/favicon.ico", tags=["meta"], include_in_schema=False)
     def favicon():

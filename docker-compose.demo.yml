@@ -15,7 +15,7 @@ services:
       DATABASE_URL: sqlite:///./resk.db
       JWT_SECRET_KEY: demo-jwt-secret-key-change-in-prod
       CSRF_SECRET: demo-csrf-secret-change-in-prod
-      COOKIE_SECURE: "false"
+      COOKIE_SECURE: "true"
       CORS_ORIGINS: https://demo.resk.fr
       PROVIDER_ENCRYPTION_KEY: demo-encryption-key-32-bytes-long!!
       LOG_PROMPTS: "true"

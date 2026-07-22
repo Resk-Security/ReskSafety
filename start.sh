@@ -47,7 +47,6 @@ echo "RESK is running:"
 echo "  Backend  → http://localhost:8000  (docs: /docs)"
 echo "  Frontend → http://localhost:5173"
 echo ""
-echo "Login: admin / changeme"
 echo "Press Ctrl+C to stop."
 
 wait

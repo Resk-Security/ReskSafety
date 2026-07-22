@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     CSRF_SECRET: str = _DEFAULT_CSRF_SECRET
 
     # Cookies
-    COOKIE_SECURE: bool = False
+    COOKIE_SECURE: bool = True
 
     # LLM backend
     LLM_BACKEND_TYPE: str = "openai"  # openai | deepseek | vllm | ollama | local | anthropic

@@ -20,12 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api
       .get<MeResponse>("/api/auth/me")
       .then(setUser)
-      .catch(() => {
-        api
-          .post<{ user: MeResponse }>("/api/auth/login", { username: "admin", password: "changeme" })
-          .then((data) => setUser(data.user))
-          .catch(() => setUser(null));
-      })
+      .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);
 

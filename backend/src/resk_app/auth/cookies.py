@@ -32,7 +32,7 @@ def set_auth_cookie(
     response.set_cookie(
         key=CSRF_COOKIE,
         value=csrf,
-        httponly=False,  # readable by frontend for double-submit
+        httponly=True,
         secure=settings.COOKIE_SECURE,
         samesite="strict",
         max_age=ttl,
