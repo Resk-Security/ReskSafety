@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import type { McpServer, Role } from "@/lib/types";
-import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Tooltip, ErrorAlert } from "@/components/ui";
-import { Server, Wrench, Shield, ChevronDown, ChevronRight, CheckCircle2, XCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, Badge, ErrorAlert } from "@/components/ui";
+import { Server, Wrench, ChevronDown, ChevronRight } from "lucide-react";
 
 export function McpToolsPage() {
+  const navigate = useNavigate();
   const [servers, setServers] = useState<McpServer[]>([]);
   const [toolsMap, setToolsMap] = useState<Record<string, any[]>>({});
   const [roles, setRoles] = useState<Role[]>([]);
@@ -55,7 +57,7 @@ export function McpToolsPage() {
       {servers.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            No MCP servers configured. <Button variant="link" className="p-0 h-auto text-sm" onClick={() => window.location.href = "/integrations/mcp"}>Add one</Button>.
+            No MCP servers configured. <button className="underline text-primary hover:text-primary/80 text-sm" onClick={() => navigate("/integrations/mcp")}>Add one</button>.
           </CardContent>
         </Card>
       )}

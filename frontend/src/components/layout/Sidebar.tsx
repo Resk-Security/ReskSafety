@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Shield, FileText, ScrollText,
   LogOut, Cpu, ChevronDown, Cog, Eye, Settings as SettingsIcon,
   Search, Lock, BrainCircuit, AlertTriangle,
-  Server, Puzzle, Brain, Sun, Moon,
+  Server, Puzzle, Brain, Sun, Moon, Wrench,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";

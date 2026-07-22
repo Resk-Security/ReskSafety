@@ -284,7 +284,7 @@ export function Roles() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {mcpServers.length === 0 && <p className="text-xs text-muted-foreground">No MCP servers configured. <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => navigate("/integrations/mcp")}>Add one</Button>.</p>}
+                    {mcpServers.length === 0 && <p className="text-xs text-muted-foreground">No MCP servers configured. <button className="underline text-primary hover:text-primary/80 text-xs" onClick={() => navigate("/integrations/mcp")}>Add one</button>.</p>}
                     {mcpServers.map((srv) => {
                       const tools = mcpToolsMap[srv.id] ?? [];
                       return (
