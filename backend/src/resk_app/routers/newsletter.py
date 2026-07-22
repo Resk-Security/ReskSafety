@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -21,10 +21,12 @@ router = APIRouter(prefix="/api/newsletter", tags=["newsletter"])
 
 
 class NewsletterSubscribeRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     name: str = Field(..., min_length=1, max_length=128)
     email: EmailStr
     company: str | None = Field(None, max_length=128)
-    _website: str | None = Field(None, max_length=256)
+    website: str | None = Field(None, max_length=256, alias="_website")
 
 
 class NewsletterSubscribeResponse(BaseModel):
@@ -81,7 +83,7 @@ def subscribe(
     request: Request,  # noqa: ARG001 - required by slowapi
     db: Session = Depends(get_db),  # noqa: B008
 ):
-    if req._website:
+    if req.website:
         logger.warning("Honeypot triggered — bot detected on subscribe: %s", req.email)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request.")
 
