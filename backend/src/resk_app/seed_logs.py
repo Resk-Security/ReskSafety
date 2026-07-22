@@ -109,7 +109,7 @@ def _seed_request_logs(session, users: list[User], policies: list[Policy]) -> No
         prompt = PROMPTS[i % len(PROMPTS)]
         status = STATUSES[i % len(STATUSES)]
         blocked_phrase = BLOCKED_PHRASES_MAP.get(i) if status == "blocked" else None
-        user = users[i % len(users)]
+        user = users[0] if users else None
         policy = policies[i % len(policies)] if policies else None
         model = MODELS[i % len(MODELS)]
         backend = BACKENDS[i % len(BACKENDS)]
@@ -154,7 +154,7 @@ def _seed_sessions(session, users: list[User]) -> None:
     existing = session.scalar(select(AgentSession).limit(1))
     if existing:
         return
-    for i, user in enumerate(users[:5]):
+    for i, user in enumerate(users[:3]):
         for s in range(2):
             sess_id = f"sess_{uuid.uuid4().hex[:12]}"
             agent_sessions = [
@@ -210,21 +210,21 @@ def _seed_changelog(session, users: list[User]) -> None:
         ChangeLog(actor="admin", entity_type="role", entity_id=str(uuid.uuid4()), action="create", summary="Created developer role"),
         ChangeLog(actor="admin", entity_type="role", entity_id=str(uuid.uuid4()), action="create", summary="Created analyst role"),
         ChangeLog(actor="admin", entity_type="role", entity_id=str(uuid.uuid4()), action="create", summary="Created restricted role"),
-        ChangeLog(actor="admin", entity_type="user", entity_id=str(users[1].id), action="create", summary=f"Created user {users[1].username}"),
-        ChangeLog(actor="admin", entity_type="user", entity_id=str(users[2].id), action="create", summary=f"Created user {users[2].username}"),
-        ChangeLog(actor="admin", entity_type="user", entity_id=str(users[3].id), action="create", summary=f"Created user {users[3].username}"),
-        ChangeLog(actor="admin", entity_type="user", entity_id=str(users[4].id), action="create", summary=f"Created user {users[4].username}"),
+        ChangeLog(actor="admin", entity_type="user", entity_id=str(users[0].id), action="update", field="roles", summary="Assigned super-admin role to admin"),
         ChangeLog(actor="admin", entity_type="role", entity_id="", action="update", field="capabilities_mask", old_value="0", new_value="255", summary="Granted admin all capabilities"),
-        ChangeLog(actor="alice", entity_type="policy", entity_id="", action="create", summary="Created default-security policy"),
-        ChangeLog(actor="alice", entity_type="policy", entity_id="", action="create", summary="Created code-sandbox policy"),
-        ChangeLog(actor="alice", entity_type="policy", entity_id="", action="create", summary="Created pii-guard policy"),
+        ChangeLog(actor="admin", entity_type="policy", entity_id="", action="create", summary="Created default-security policy"),
+        ChangeLog(actor="admin", entity_type="policy", entity_id="", action="create", summary="Created code-sandbox policy"),
+        ChangeLog(actor="admin", entity_type="policy", entity_id="", action="create", summary="Created pii-guard policy"),
         ChangeLog(actor="admin", entity_type="role", entity_id="", action="update", field="policies", old_value="[]", new_value="[default-security, code-sandbox]", summary="Attached policies to super-admin"),
         ChangeLog(actor="admin", entity_type="provider", entity_id="", action="create", summary="Added DeepSeek provider"),
-        ChangeLog(actor="bob", entity_type="user", entity_id=str(users[2].id), action="update", field="roles", old_value="[]", new_value="[developer]", summary="Self-assigned developer role"),
+        ChangeLog(actor="admin", entity_type="provider", entity_id="", action="create", summary="Added OpenAI provider"),
+        ChangeLog(actor="admin", entity_type="provider", entity_id="", action="create", summary="Added Ollama provider"),
+        ChangeLog(actor="admin", entity_type="mcp", entity_id="", action="create", summary="Added filesystem MCP server"),
+        ChangeLog(actor="admin", entity_type="mcp", entity_id="", action="create", summary="Added github MCP server"),
         ChangeLog(actor="admin", entity_type="settings", entity_id="global", action="update", field="rate_limit", old_value="30", new_value="60", summary="Updated rate limit to 60 req/min"),
-        ChangeLog(actor="alice", entity_type="policy", entity_id="", action="update", field="rules", summary="Added SQL injection rules to default-security"),
-        ChangeLog(actor="admin", entity_type="user", entity_id=str(users[4].id), action="update", field="is_active", old_value="true", new_value="false", summary="Deactivated mallory account"),
-        ChangeLog(actor="admin", entity_type="user", entity_id=str(users[4].id), action="update", field="is_active", old_value="false", new_value="true", summary="Reactivated mallory account"),
+        ChangeLog(actor="admin", entity_type="policy", entity_id="", action="update", field="classifiers", summary="Enabled multi-level classifiers"),
+        ChangeLog(actor="admin", entity_type="policy", entity_id="", action="update", field="semantic_detection", summary="Enabled semantic detection at threshold 0.7"),
+        ChangeLog(actor="admin", entity_type="policy", entity_id="", action="update", field="scanning_pipeline", summary="Configured 5-stage scanning pipeline"),
     ]
     for entry in entries:
         session.add(entry)
