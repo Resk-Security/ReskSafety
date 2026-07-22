@@ -26,8 +26,9 @@ export function track(event: string, data?: Record<string, unknown>) {
     ts: new Date().toISOString(),
   };
 
-  navigator.sendBeacon?.(`${API_BASE}/api/track`, JSON.stringify(payload)) ||
-    fetch(`${API_BASE}/api/track`, { method: "POST", body: JSON.stringify(payload), headers: { "Content-Type": "application/json" }, keepalive: true }).catch(() => {});
+  const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+  navigator.sendBeacon?.(`${API_BASE}/api/track`, blob) ||
+    fetch(`${API_BASE}/api/track`, { method: "POST", body: blob, headers: { "Content-Type": "application/json" }, keepalive: true }).catch(() => {});
 }
 
 export function trackPage() {
