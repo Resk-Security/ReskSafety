@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { trackPage } from "@/lib/tracker";
+import { trackPage, getVisitorId } from "@/lib/tracker";
 
 export function DemoBanner() {
   const loc = useLocation();
@@ -12,6 +12,7 @@ export function DemoBanner() {
       <span>⚡ DÉMO — RESK Admin</span>
       <span className="opacity-60">·</span>
       <span className="opacity-70 font-normal">admin / changeme</span>
+      <span className="opacity-50 text-[10px]">visitor: {getVisitorId()?.slice(0, 8)}</span>
     </div>
   );
 }

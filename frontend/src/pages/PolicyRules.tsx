@@ -6,7 +6,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
   ErrorAlert,
 } from "@/components/ui";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, X } from "lucide-react";
 
 const EMPTY_RULE = (): PolicyRule => ({
   name: "", description: "", rule_type: "contains", phrases: [""], mode: "hard", penalty: 10,
@@ -135,13 +135,33 @@ export function PolicyRules() {
                   placeholder="What does this block?" />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="space-y-1 flex-1">
-                <label className="text-xs font-medium">Phrase</label>
-                <Input value={form.phrases[0] ?? ""}
-                  onChange={(e) => setForm({ ...form, phrases: e.target.value ? [e.target.value] : [""] })}
-                  placeholder="phrase to match…" />
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Phrases</label>
+              <div className="space-y-1.5">
+                {form.phrases.map((p, idx) => (
+                  <div key={idx} className="flex gap-1.5 items-center">
+                    <Input value={p}
+                      onChange={(e) => {
+                        const next = [...form.phrases];
+                        next[idx] = e.target.value;
+                        setForm({ ...form, phrases: next });
+                      }}
+                      placeholder="phrase to match…"
+                      className="flex-1" />
+                    {form.phrases.length > 1 && (
+                      <button onClick={() => setForm({ ...form, phrases: form.phrases.filter((_, i) => i !== idx) })}
+                        className="text-muted-foreground hover:text-destructive p-1">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <Button variant="ghost" size="sm" onClick={() => setForm({ ...form, phrases: [...form.phrases, ""] })}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add phrase
+                </Button>
               </div>
+            </div>
+            <div className="flex items-center gap-2">
               <div className="space-y-1">
                 <label className="text-xs font-medium">Type</label>
                 <Select value={form.rule_type}

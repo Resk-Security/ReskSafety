@@ -16,6 +16,7 @@ from resk_app.models.role import Role
 from resk_app.models.session import AgentSession, ToolCall
 from resk_app.models.use_case import UseCaseConfig
 from resk_app.models.user import User
+from resk_app.routers.tracker import TrackEvent
 
 __all__ = [
     "Capability", "ChangeLog", "Model", "NewsletterSubscriber", "Policy", "PolicyConfig",

@@ -17,17 +17,12 @@ import {
 import { fetchCapabilities, clearCapabilitiesCache, type CapabilityCategory } from "@/lib/capabilities";
 import {
   Shield,
-  Eye,
-  SlidersHorizontal,
-  Wrench,
   Plus,
   Trash2,
-  CheckCircle2,
   FlaskConical,
   History,
-  BookOpen,
   Cog,
-  X, Star, Globe, HelpCircle, ExternalLink, Server,
+  Globe, HelpCircle, Server,
 } from "lucide-react";
 
 interface RoleFormData {
@@ -50,39 +45,7 @@ interface ChangeLogEntry {
   created_at: string;
 }
 
-interface CustomPreset {
-  name: string;
-  mask: number;
-  description: string;
-}
-
-const PRESETS: Array<{
-  key: string;
-  mask: number;
-  description: string;
-  color: string;
-  icon: any;
-}> = [
-  { key: "viewer", mask: 0b00000111, description: "Read-only: tools, code gen, DB reads.", color: "border-teal-500/50 bg-teal-50 dark:bg-teal-950/20", icon: BookOpen },
-  { key: "reader", mask: 0b00001111, description: "Viewer + DB write access.", color: "border-green-500/50 bg-green-50 dark:bg-green-950/20", icon: Eye },
-  { key: "operator", mask: 0b00011111, description: "Reader + send emails.", color: "border-blue-500/50 bg-blue-50 dark:bg-blue-950/20", icon: Shield },
-  { key: "developer", mask: 0b00111111, description: "Operator + access PII data.", color: "border-indigo-500/50 bg-indigo-50 dark:bg-indigo-950/20", icon: Cog },
-  { key: "architect", mask: 0b01111111, description: "Developer + manage users.", color: "border-orange-500/50 bg-orange-50 dark:bg-orange-950/20", icon: Wrench },
-  { key: "root", mask: 0b11111111, description: "All capabilities — unrestricted access.", color: "border-red-500/50 bg-red-50 dark:bg-red-950/20", icon: SlidersHorizontal },
-];
-
-const STORAGE_KEY = "resk_custom_presets";
-
-function loadCustomPresets(): CustomPreset[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
-  catch { return []; }
-}
-
-function saveCustomPresets(presets: CustomPreset[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
-}
-
-type DetailTab = "capabilities" | "policies" | "preview" | "mcp";
+type DetailTab = "capabilities" | "policies" | "preview";
 
 export function Roles() {
   const navigate = useNavigate();
@@ -107,7 +70,6 @@ export function Roles() {
   const [auditLog, setAuditLog] = useState<ChangeLogEntry[]>([]);
   const [previewText, setPreviewText] = useState("");
   const [previewResult, setPreviewResult] = useState("");
-  const [customPresets, setCustomPresets] = useState<CustomPreset[]>(loadCustomPresets);
   const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
   const [mcpToolsMap, setMcpToolsMap] = useState<Record<string, any[]>>({});
   const [mcpAllowlist, setMcpAllowlist] = useState<string[]>([]);
@@ -130,19 +92,22 @@ export function Roles() {
 
   const selectedRole = roles.find((r) => r.id === selectedRoleId);
 
-  useEffect(() => {
-    if (detailTab === "mcp" && selectedRole) {
-      setMcpAllowlist(selectedRole.mcp_tool_allowlist ?? []);
-      mcpServers.forEach(async (srv) => {
-        if (!mcpToolsMap[srv.id]) {
-          try {
-            const res = await api.get<{ tools: any[] }>(`/api/mcp/servers/${srv.id}/tools`);
-            setMcpToolsMap((prev) => ({ ...prev, [srv.id]: res.tools }));
-          } catch {}
-        }
-      });
+  const loadMcpTools = useCallback(async () => {
+    if (!selectedRole) return;
+    setMcpAllowlist(selectedRole.mcp_tool_allowlist ?? []);
+    const map: Record<string, any[]> = {};
+    for (const srv of mcpServers) {
+      if (!mcpToolsMap[srv.id]) {
+        try {
+          const res = await api.get<{ tools: any[] }>(`/api/mcp/servers/${srv.id}/tools`);
+          map[srv.id] = res.tools;
+        } catch {}
+      }
     }
-  }, [detailTab, selectedRole?.id]);
+    if (Object.keys(map).length) setMcpToolsMap((prev) => ({ ...prev, ...map }));
+  }, [selectedRole?.id]);
+
+  useEffect(() => { loadMcpTools(); }, [loadMcpTools]);
 
   const toggleMcpTool = async (entry: string) => {
     if (!selectedRole) return;
@@ -153,29 +118,6 @@ export function Roles() {
     try {
       await api.put(`/api/roles/${selectedRole.id}`, { mcp_tool_allowlist: updated });
     } catch (e) { setErr(String(e)); }
-  };
-
-  const applyPreset = async (mask: number) => {
-    if (!selectedRole) return;
-    try {
-      await api.put(`/api/roles/${selectedRole.id}`, { capabilities_mask: mask, policy_ids: form.policy_ids });
-      setForm((f) => ({ ...f, capabilities_mask: mask }));
-      load();
-    } catch (e) { setErr(String(e)); }
-  };
-
-  const saveAsPreset = () => {
-    const name = prompt("Name this preset:");
-    if (!name) return;
-    const updated: CustomPreset[] = [...customPresets, { name, mask: form.capabilities_mask, description: `Custom: ${name}` }];
-    setCustomPresets(updated);
-    saveCustomPresets(updated);
-  };
-
-  const removeCustomPreset = (idx: number) => {
-    const updated = customPresets.filter((_, i) => i !== idx);
-    setCustomPresets(updated);
-    saveCustomPresets(updated);
   };
 
   const toggleBit = async (bit: number) => {
@@ -230,11 +172,6 @@ export function Roles() {
     } catch (e: any) { setPreviewResult(`Error: ${e?.message || e}`); }
   };
 
-  const allPresets = [...PRESETS, ...customPresets.map((cp) => ({
-    key: cp.name, mask: cp.mask, description: cp.description,
-    color: "border-violet-500/50 bg-violet-50 dark:bg-violet-950/20", icon: Star, custom: true,
-  }))];
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -251,50 +188,18 @@ export function Roles() {
 
       <ErrorAlert message={err} />
 
-      {/* ── Preset cards (no binary mask) ── */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        {allPresets.map((preset: any) => {
-          const Icon = preset.icon;
-          const isActive = selectedRole && form.capabilities_mask === preset.mask;
-          return (
-            <Card key={preset.key}
-              className={`cursor-pointer transition-all hover:shadow-md relative ${
-                isActive ? "ring-2 ring-primary " + preset.color : preset.color + " opacity-70 hover:opacity-100"
-              }`}
-              onClick={() => { if (selectedRole) applyPreset(preset.mask); }}>
-              <CardContent className={`pt-3 pb-3 ${!selectedRole ? "pointer-events-none opacity-50" : ""}`}>
-                <div className="flex items-start justify-between">
-                  <Icon className={`h-5 w-5 ${preset.color.split(" ")[0].replace("border-", "text-")}`} />
-                  {isActive && <CheckCircle2 className="h-4 w-4 text-primary" />}
-                </div>
-                <div className="mt-1 text-xs font-semibold capitalize">{preset.key}</div>
-                <div className="mt-1 text-[10px] text-muted-foreground leading-tight">{preset.description}</div>
-                {preset.custom && (
-                  <button className="absolute -right-1 -top-1 rounded-full bg-background border p-0.5"
-                    onClick={(e) => { e.stopPropagation(); removeCustomPreset(allPresets.indexOf(preset) - PRESETS.length); }}>
-                    <X className="h-3 w-3 text-muted-foreground" />
-                  </button>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
       {/* ── Main ── */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-2 lg:col-span-1">
-          <h2 className="text-sm font-medium text-muted-foreground">Custom Roles</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">Roles</h2>
           {roles.map((r) => {
-            const found = PRESETS.find((p) => p.mask === r.capabilities_mask);
-            const Icon = found?.icon || Cog;
             return (
               <Card key={r.id}
                 className={`cursor-pointer transition-all hover:shadow-sm ${selectedRoleId === r.id ? "ring-2 ring-primary" : ""}`}
                 onClick={() => { setSelectedRoleId(r.id); setForm({ name: r.name, description: r.description || "", capabilities_mask: r.capabilities_mask, policy_ids: [] }); setDetailTab("capabilities"); }}>
                 <CardContent className="flex items-center justify-between py-2.5">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <Shield className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0">
                       <div className="text-sm font-medium truncate">{r.name}</div>
                       <div className="text-xs text-muted-foreground truncate">{r.description || "\u2014"}</div>
@@ -307,7 +212,7 @@ export function Roles() {
               </Card>
             );
           })}
-          {roles.length === 0 && <div className="text-xs text-muted-foreground">No custom roles yet.</div>}
+          {roles.length === 0 && <div className="text-xs text-muted-foreground">No roles yet.</div>}
         </div>
 
         <div className="lg:col-span-2 space-y-4">
@@ -319,18 +224,11 @@ export function Roles() {
             </Card>
           ) : (
             <>
-              <div className="flex items-center gap-2">
-                <div className="text-base font-semibold">{selectedRole.name}</div>
-                <Tooltip content="Save current capabilities as a reusable preset card above.">
-                  <Button variant="ghost" size="sm" onClick={saveAsPreset}>
-                    <Star className="h-4 w-4" /> Save as preset
-                  </Button>
-                </Tooltip>
-              </div>
+              <div className="text-base font-semibold">{selectedRole.name}</div>
 
               {/* ── Detail tabs ── */}
               <div className="flex gap-4 border-b">
-                {(["capabilities", "policies", "mcp", "preview"] as DetailTab[]).map((t) => (
+                {(["capabilities", "policies", "preview"] as DetailTab[]).map((t) => (
                   <button key={t} onClick={() => setDetailTab(t)}
                     className={`pb-2 text-sm font-medium capitalize transition-colors ${
                       detailTab === t
@@ -343,7 +241,7 @@ export function Roles() {
               </div>
 
               {detailTab === "capabilities" && (
-                <>
+                <div className="space-y-6">
                   <div className="grid gap-3 sm:grid-cols-2">
                   {capabilityCategories.map((cat) => {
                     const CatIcon = cat.icon;
@@ -374,50 +272,19 @@ export function Roles() {
                     );
                   })}
                 </div>
-              </>
-            )}
 
-            {detailTab === "policies" && (
-                <Card>
-                  <CardHeader className="pb-1.5">
-                    <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                      <Globe className="h-4 w-4 text-muted-foreground" />
-                      <Tooltip content="Content filtering policies attached to this role. Each policy defines banned phrases, biased tokens, and tool whitelists.">
-                        <span className="underline decoration-dotted underline-offset-4 cursor-help">Policies</span>
-                      </Tooltip>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-1.5">
-                      {policies.map((p) => {
-                        const checked = form.policy_ids.includes(p.id);
-                        return (
-                          <Tooltip key={p.id} content={p.description || p.name}>
-                            <Badge variant={checked ? "default" : "outline"} className="cursor-pointer text-xs"
-                              onClick={() => togglePolicy(p.id, !checked)}>
-                              {checked ? "\u2713 " : ""}{p.name}
-                            </Badge>
-                          </Tooltip>
-                        );
-                      })}
-                      {policies.length === 0 && <div className="text-xs text-muted-foreground">No policies yet.</div>}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {detailTab === "mcp" && (
+                {/* ── MCP tools section ── */}
                 <Card>
                   <CardHeader className="pb-1.5">
                     <CardTitle className="flex items-center gap-2 text-sm font-medium">
                       <Server className="h-4 w-4 text-muted-foreground" />
-                      <Tooltip content="Allow specific MCP tools for this role. Format: server_id:tool_name">
-                        <span className="underline decoration-dotted underline-offset-4 cursor-help">MCP Tools</span>
+                      <Tooltip content="Allow specific MCP tools for this role.">
+                        <span className="underline decoration-dotted underline-offset-4 cursor-help">MCP Tool Access</span>
                       </Tooltip>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {mcpServers.length === 0 && <p className="text-xs text-muted-foreground">No MCP servers configured. Add one in Integrations &gt; MCP Servers.</p>}
+                    {mcpServers.length === 0 && <p className="text-xs text-muted-foreground">No MCP servers configured. <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => navigate("/integrations/mcp")}>Add one</Button>.</p>}
                     {mcpServers.map((srv) => {
                       const tools = mcpToolsMap[srv.id] ?? [];
                       return (
@@ -452,9 +319,39 @@ export function Roles() {
                     )}
                   </CardContent>
                 </Card>
+              </div>
+            )}
+
+            {detailTab === "policies" && (
+                <Card>
+                  <CardHeader className="pb-1.5">
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <Tooltip content="Content filtering policies attached to this role. Each policy defines banned phrases, biased tokens, and tool whitelists.">
+                        <span className="underline decoration-dotted underline-offset-4 cursor-help">Policies</span>
+                      </Tooltip>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-1.5">
+                      {policies.map((p) => {
+                        const checked = form.policy_ids.includes(p.id);
+                        return (
+                          <Tooltip key={p.id} content={p.description || p.name}>
+                            <Badge variant={checked ? "default" : "outline"} className="cursor-pointer text-xs"
+                              onClick={() => togglePolicy(p.id, !checked)}>
+                              {checked ? "\u2713 " : ""}{p.name}
+                            </Badge>
+                          </Tooltip>
+                        );
+                      })}
+                      {policies.length === 0 && <div className="text-xs text-muted-foreground">No policies yet.</div>}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
 
-              {detailTab === "preview" && (
+            {detailTab === "preview" && (
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="flex items-center gap-2 text-sm font-medium">
@@ -512,7 +409,7 @@ export function Roles() {
       {showNewDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <Card className="w-full max-w-md">
-            <CardHeader><CardTitle>New Custom Role</CardTitle></CardHeader>
+            <CardHeader><CardTitle>New Role</CardTitle></CardHeader>
             <CardContent>
               <form onSubmit={createRole} className="space-y-3">
                 <div>

@@ -15,6 +15,7 @@ import { Logs } from "@/pages/Logs";
 import { Providers } from "@/pages/Providers";
 import { ProviderModels } from "@/pages/ProviderModels";
 import { McpServersPage } from "@/pages/McpServersPage";
+import { McpToolsPage } from "@/pages/McpToolsPage";
 import { MemoryPage } from "@/pages/MemoryPage";
 import { Observability } from "@/pages/Observability";
 import { Settings } from "@/pages/Settings";
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="/providers" element={<Protected><Providers /></Protected>} />
           <Route path="/providers/:providerId/models" element={<Protected><ProviderModels /></Protected>} />
           <Route path="/integrations/mcp" element={<Protected><McpServersPage /></Protected>} />
+          <Route path="/integrations/tools" element={<Protected><McpToolsPage /></Protected>} />
           <Route path="/memory" element={<Protected><MemoryPage /></Protected>} />
           <Route path="/observability" element={<Protected><Observability /></Protected>} />
           <Route path="/settings" element={<Protected><Settings /></Protected>} />

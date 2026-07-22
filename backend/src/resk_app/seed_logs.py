@@ -99,9 +99,11 @@ STATUSES = [
 ]
 
 BLOCKED_PHRASES_MAP: dict[int, str] = {
+    0: "jailbreak: system prompt extraction",
     2: "system_prompt_injection: 'ignore previous instructions'",
     6: "sql_injection: 'DROP TABLE'",
     8: "pii_leak: email extraction attempt",
+    18: "privilege_escalation: admin creation",
     20: "command_injection: ssh/rm -rf",
     30: "jailbreak: DAN (Do Anything Now) override",
     34: "jailbreak: 'ignore all safety guidelines'",

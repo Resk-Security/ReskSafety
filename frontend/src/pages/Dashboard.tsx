@@ -1,4 +1,4 @@
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { api } from "@/lib/api";
@@ -141,8 +141,6 @@ export function Dashboard() {
     api.get<PolicyConfig[]>("/api/policy-configs").then(setPolicyConfigs).catch(() => {});
     api.get<GlobalSettings>("/api/settings/global").then(setGlobalSettings).catch(() => {});
   }, []);
-
-  if (!user) return <Navigate to="/login" replace />;
 
   function toggleLayer(key: string) {
     setDisabledLayers((prev) => {

@@ -9,6 +9,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getVisitorId } from "@/lib/tracker";
 
 interface SubItem {
   to: string;
@@ -29,7 +30,7 @@ const nav: NavItem[] = [
   { to: "/users", label: "Users", icon: Users },
   { to: "/roles", label: "Roles", icon: Shield },
   {
-    label: "Policies", icon: FileText,
+    to: "/policies", label: "Policies", icon: FileText,
     children: [
       { to: "/policies/rules", label: "Rules", icon: FileText },
       { to: "/policies/semantic-detection", label: "Semantic Detection", icon: Search },
@@ -48,6 +49,7 @@ const nav: NavItem[] = [
     label: "Integrations", icon: Puzzle,
     children: [
       { to: "/integrations/mcp", label: "MCP Servers", icon: Server },
+      { to: "/integrations/tools", label: "MCP Tools", icon: Wrench },
     ],
   },
   { to: "/memory", label: "Memory", icon: Brain },
@@ -109,14 +111,34 @@ export function Sidebar() {
             return (
               <div key={n.label}>
                 <div className="flex">
-                  <button
-                    onClick={() => toggle(n.label)}
-                    className="flex flex-1 items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                  >
-                    <n.icon className="h-4 w-4 shrink-0" />
-                    <span className="flex-1 text-left">{n.label}</span>
-                    <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
-                  </button>
+                  {n.to ? (
+                    <NavLink
+                      to={n.to}
+                      end
+                      onClick={() => toggle(n.label)}
+                      className={({ isActive }) =>
+                        cn(
+                          "flex flex-1 items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                          isActive
+                            ? "bg-accent text-accent-foreground"
+                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                        )
+                      }
+                    >
+                      <n.icon className="h-4 w-4 shrink-0" />
+                      <span className="flex-1 text-left">{n.label}</span>
+                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
+                    </NavLink>
+                  ) : (
+                    <button
+                      onClick={() => toggle(n.label)}
+                      className="flex flex-1 items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <n.icon className="h-4 w-4 shrink-0" />
+                      <span className="flex-1 text-left">{n.label}</span>
+                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
+                    </button>
+                  )}
                 </div>
                 {open && (
                   <div className="ml-3 mt-0.5 space-y-0.5 border-l pl-2">
@@ -189,13 +211,16 @@ export function Sidebar() {
           {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           {dark ? "Light mode" : "Dark mode"}
         </button>
+        <div className="px-2 text-[10px] text-muted-foreground truncate">
+          visitor: {getVisitorId()?.slice(0, 8)}…
+        </div>
         <Button
           variant="ghost"
           size="sm"
           className="w-full justify-start"
           onClick={async () => {
             await logout();
-            navigate("/login");
+            window.location.reload();
           }}
         >
           <LogOut className="mr-2 h-4 w-4" /> Logout
