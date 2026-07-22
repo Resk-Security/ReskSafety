@@ -2,7 +2,7 @@ name: CI/CD
 
 on:
   push:
-    branches: [main, demo]
+    branches: [demo]
   workflow_dispatch:
 
 env:
@@ -29,7 +29,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/demo'
+    if: github.ref == 'refs/heads/demo'
     steps:
       - uses: actions/checkout@v4
 
@@ -43,6 +43,6 @@ jobs:
           script: |
             mkdir -p ${{ env.VPS_DEPLOY_PATH }}
             cd ${{ env.VPS_DEPLOY_PATH }}
-            git fetch origin && git reset --hard origin/${{ github.ref_name }}
+            git fetch origin && git reset --hard origin/demo
             docker compose -f ${{ env.COMPOSE_FILE }} up -d --build
             docker image prune -f
