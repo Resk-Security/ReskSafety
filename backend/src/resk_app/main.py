@@ -39,6 +39,7 @@ from resk_app.routers import (
 )
 from resk_app.routers.admin import router as admin_router
 from resk_app.routers.firewall import router as firewall_router
+from resk_app.routers.tracker import router as tracker_router
 from resk_app.seed import run_seed, run_seed_prod, run_seed_logs
 
 
@@ -119,6 +120,7 @@ def create_app() -> FastAPI:
     app.include_router(models_router)
     app.include_router(providers_router)
     app.include_router(settings_router)
+    app.include_router(tracker_router)
     return app
 
 

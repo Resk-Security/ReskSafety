@@ -23,25 +23,29 @@ from resk_app.rbac.capabilities import build_mask, Capability as C
 USERS = {}
 
 ROLES = {
-    "super-admin": {
-        "description": "All capabilities — reserved for platform administrators",
-        "mask": build_mask(C.CAN_CALL_TOOLS, C.CAN_GENERATE_CODE, C.DB_READ, C.DB_WRITE, C.CAN_SEND_EMAIL, C.CAN_ACCESS_PII, C.CAN_MANAGE_USERS, C.CAN_CONFIGURE_SYSTEM),
+    "viewer": {
+        "description": "Read-only: tools, code gen, DB reads.",
+        "mask": build_mask(C.CAN_CALL_TOOLS, C.CAN_GENERATE_CODE, C.DB_READ),
     },
-    "security-admin": {
-        "description": "User management, system configuration, PII access, and database read/write",
-        "mask": build_mask(C.CAN_CALL_TOOLS, C.DB_READ, C.DB_WRITE, C.CAN_ACCESS_PII, C.CAN_MANAGE_USERS, C.CAN_CONFIGURE_SYSTEM),
+    "reader": {
+        "description": "Viewer + DB write access.",
+        "mask": build_mask(C.CAN_CALL_TOOLS, C.CAN_GENERATE_CODE, C.DB_READ, C.DB_WRITE),
+    },
+    "operator": {
+        "description": "Reader + send emails.",
+        "mask": build_mask(C.CAN_CALL_TOOLS, C.CAN_GENERATE_CODE, C.DB_READ, C.DB_WRITE, C.CAN_SEND_EMAIL),
     },
     "developer": {
-        "description": "Code generation, tool calling, database reads, and email sending",
-        "mask": build_mask(C.CAN_CALL_TOOLS, C.CAN_GENERATE_CODE, C.DB_READ, C.CAN_SEND_EMAIL),
+        "description": "Operator + access PII data.",
+        "mask": build_mask(C.CAN_CALL_TOOLS, C.CAN_GENERATE_CODE, C.DB_READ, C.DB_WRITE, C.CAN_SEND_EMAIL, C.CAN_ACCESS_PII),
     },
-    "analyst": {
-        "description": "Basic tool access and read-only database queries",
-        "mask": build_mask(C.CAN_CALL_TOOLS, C.DB_READ),
+    "architect": {
+        "description": "Developer + manage users.",
+        "mask": build_mask(C.CAN_CALL_TOOLS, C.CAN_GENERATE_CODE, C.DB_READ, C.DB_WRITE, C.CAN_SEND_EMAIL, C.CAN_ACCESS_PII, C.CAN_MANAGE_USERS),
     },
-    "restricted": {
-        "description": "Chat only — no tools, no data access, no code execution",
-        "mask": build_mask(C.CAN_CALL_TOOLS),
+    "root": {
+        "description": "All capabilities — unrestricted access.",
+        "mask": build_mask(C.CAN_CALL_TOOLS, C.CAN_GENERATE_CODE, C.DB_READ, C.DB_WRITE, C.CAN_SEND_EMAIL, C.CAN_ACCESS_PII, C.CAN_MANAGE_USERS, C.CAN_CONFIGURE_SYSTEM),
     },
 }
 
@@ -399,7 +403,7 @@ def _seed_roles(session) -> None:
 
 
 def _seed_users(session) -> None:
-    _seed_user(session, "admin", "admin@example.com", "changeme", is_admin=True, role_name="super-admin")
+    _seed_user(session, "admin", "admin@example.com", "changeme", is_admin=True, role_name="root")
     for username, cfg in USERS.items():
         _seed_user(session, username, cfg["email"], cfg["password"], cfg["is_admin"], cfg["role"])
 
@@ -416,25 +420,25 @@ def _seed_policies(session) -> None:
 
 
 def _attach_policies_to_roles(session) -> None:
-    super_admin = session.scalar(select(Role).where(Role.name == "super-admin"))
-    security_admin = session.scalar(select(Role).where(Role.name == "security-admin"))
+    root = session.scalar(select(Role).where(Role.name == "root"))
+    architect = session.scalar(select(Role).where(Role.name == "architect"))
     developer = session.scalar(select(Role).where(Role.name == "developer"))
 
     default_security = session.scalar(select(Policy).where(Policy.name == "default-security"))
     code_sandbox = session.scalar(select(Policy).where(Policy.name == "code-sandbox"))
     pii_guard = session.scalar(select(Policy).where(Policy.name == "pii-guard"))
 
-    if super_admin and default_security and default_security not in super_admin.policies:
-        super_admin.policies.append(default_security)
-    if super_admin and code_sandbox and code_sandbox not in super_admin.policies:
-        super_admin.policies.append(code_sandbox)
-    if super_admin and pii_guard and pii_guard not in super_admin.policies:
-        super_admin.policies.append(pii_guard)
+    if root and default_security and default_security not in root.policies:
+        root.policies.append(default_security)
+    if root and code_sandbox and code_sandbox not in root.policies:
+        root.policies.append(code_sandbox)
+    if root and pii_guard and pii_guard not in root.policies:
+        root.policies.append(pii_guard)
 
-    if security_admin and default_security and default_security not in security_admin.policies:
-        security_admin.policies.append(default_security)
-    if security_admin and pii_guard and pii_guard not in security_admin.policies:
-        security_admin.policies.append(pii_guard)
+    if architect and default_security and default_security not in architect.policies:
+        architect.policies.append(default_security)
+    if architect and pii_guard and pii_guard not in architect.policies:
+        architect.policies.append(pii_guard)
 
     if developer and default_security and default_security not in developer.policies:
         developer.policies.append(default_security)
