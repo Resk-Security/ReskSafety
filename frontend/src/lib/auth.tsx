@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { api } from "./api";
+import { api, setCsrf } from "./api";
 import { clearCsrf } from "./api";
 import type { MeResponse } from "./types";
 
@@ -18,17 +18,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     api
-      .get<MeResponse>("/api/auth/me")
-      .then(setUser)
+      .get<{ user: MeResponse; csrf_token: string }>("/api/auth/me")
+      .then((data) => {
+        setCsrf(data.csrf_token);
+        setUser(data.user);
+      })
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);
 
   async function login(username: string, password: string) {
-    const data = await api.post<{ user: MeResponse }>("/api/auth/login", {
+    const data = await api.post<{ user: MeResponse; csrf_token: string }>("/api/auth/login", {
       username,
       password,
     });
+    setCsrf(data.csrf_token);
     setUser(data.user);
   }
 

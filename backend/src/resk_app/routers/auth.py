@@ -102,8 +102,17 @@ def logout(response: Response):
 
 
 @router.get("/me")
-def me(current: CurrentAdmin = Depends(get_current_admin)) -> UserMeResponse:
-    return _user_me(current)
+def me(
+    response: Response,
+    current: CurrentAdmin = Depends(get_current_admin),
+) -> dict:
+    mask = compute_user_mask(current)
+    token, csrf = create_jwt(current.id, current.username, True, mask, token_type="admin")
+    set_auth_cookie(response, token, csrf, cookie_name=ADMIN_COOKIE)
+    return {
+        "user": _user_me(current).model_dump(),
+        "csrf_token": csrf,
+    }
 
 
 @router.post("/refresh")

@@ -2,10 +2,11 @@ const API_BASE = "";
 
 let csrfToken: string | null = null;
 
+export function setCsrf(token: string | null) {
+  csrfToken = token;
+}
+
 async function getCsrf(): Promise<string | null> {
-  if (csrfToken) return csrfToken;
-  const m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
-  csrfToken = m ? decodeURIComponent(m[1]) : null;
   return csrfToken;
 }
 
