@@ -102,29 +102,52 @@ def _seed_request_logs(session, users: list[User], policies: list[Policy]) -> No
     existing = session.scalar(select(RequestLog).limit(1))
     if existing:
         return
-    for i in range(50):
+    MODELS = ["deepseek-chat", "gpt-4o-mini", "gpt-4o", "llama3", "deepseek-v4-flash"]
+    BACKENDS = ["deepseek", "openai", "ollama"]
+
+    for i in range(80):
         prompt = PROMPTS[i % len(PROMPTS)]
         status = STATUSES[i % len(STATUSES)]
         blocked_phrase = BLOCKED_PHRASES_MAP.get(i) if status == "blocked" else None
         user = users[i % len(users)]
         policy = policies[i % len(policies)] if policies else None
+        model = MODELS[i % len(MODELS)]
+        backend = BACKENDS[i % len(BACKENDS)]
+        tokens = random.randint(50, 500) if status == "success" else 0
 
         log = RequestLog(
             id=uuid.uuid4(),
             user_id=user.id,
             policy_id=policy.id if policy else None,
             status=status,
-            backend_type="deepseek",
-            model="deepseek-chat" if status == "success" else "",
+            backend_type=backend,
+            model=model if status == "success" else "",
             blocked_phrase=blocked_phrase,
             prompt_hash=hashlib.sha256(prompt.encode()).hexdigest()[:16],
             extra={
                 "prompt_length": len(prompt),
-                "tokens_used": len(prompt) // 4 if status == "success" else 0,
+                "tokens_used": tokens,
+                "model": model,
+                "backend": backend,
             } if status == "success" else {"reason": blocked_phrase or "unknown"},
-            created_at=_utc_ago(days=i // 10, hours=i * 3 % 24, minutes=i * 7 % 60),
+            created_at=_utc_ago(days=i // 8, hours=i * 2 % 24, minutes=i * 11 % 60),
         )
         session.add(log)
+
+
+TOOL_NAMES = ["read", "write", "bash", "grep", "glob", "edit", "notify", "search", "list", "analyze"]
+TOOL_TOPICS = [
+    ("file", "src/main.py"),
+    ("pattern", "api_key"),
+    ("file", "docker-compose.yml"),
+    ("query", "SELECT * FROM users"),
+    ("url", "https://api.example.com"),
+    ("file", "README.md"),
+    ("pattern", "TODO"),
+    ("command", "pytest tests/"),
+    ("file", "package.json"),
+    ("pattern", "import "),
+]
 
 
 def _seed_sessions(session, users: list[User]) -> None:
@@ -132,41 +155,45 @@ def _seed_sessions(session, users: list[User]) -> None:
     if existing:
         return
     for i, user in enumerate(users[:5]):
-        sess_id = f"sess_{uuid.uuid4().hex[:12]}"
-        agent_sessions = [
-            AgentSession(
-                id=uuid.uuid4(),
-                user_id=user.id,
-                session_id=sess_id,
-                agent_id=f"agent-{user.username}",
-                agent_type="opencode",
-                status="closed" if i < 3 else "active",
-                tokens_in=100 + i * 50,
-                tokens_out=200 + i * 30,
-                total_tokens=300 + i * 80,
-                tools_connected=[f"tool_{t}" for t in range(i + 1)],
-                meta_data={"role": user.roles[0].name if user.roles else "none"},
-                started_at=_utc_ago(days=7 - i, hours=2),
-                last_seen_at=_utc_ago(days=i, hours=1),
-            )
-        ]
-        session.add_all(agent_sessions)
-        session.flush()
-        for j in range(i + 2):
-            tool = ToolCall(
-                id=uuid.uuid4(),
-                session_id=agent_sessions[0].session_id,
-                agent_id=agent_sessions[0].agent_id,
-                tool_name=["read", "write", "bash", "grep", "glob"][j % 5],
-                tool_type="function",
-                duration_ms=random_between(100, 3000),
-                tokens_cost=10 + j * 5,
-                success=j != 2,
-                parameters={"file" if j < 3 else "pattern": f"test_{j}"},
-                result_summary=f"Found {j + 1} results" if j < 3 else f"Searched for pattern_{j}",
-                created_at=_utc_ago(days=7 - i, hours=2, minutes=j * 10),
-            )
-            session.add(tool)
+        for s in range(2):
+            sess_id = f"sess_{uuid.uuid4().hex[:12]}"
+            agent_sessions = [
+                AgentSession(
+                    id=uuid.uuid4(),
+                    user_id=user.id,
+                    session_id=sess_id,
+                    agent_id=f"agent-{user.username}",
+                    agent_type="opencode",
+                    status="closed" if (i + s) < 4 else "active",
+                    tokens_in=100 + (i * 50) + (s * 20),
+                    tokens_out=200 + (i * 30) + (s * 15),
+                    total_tokens=300 + (i * 80) + (s * 35),
+                    tools_connected=TOOL_NAMES[:i + s + 1],
+                    meta_data={"role": user.roles[0].name if user.roles else "none", "session_num": s + 1},
+                    started_at=_utc_ago(days=7 - i - s, hours=2 + s),
+                    last_seen_at=_utc_ago(days=i + s, hours=1 + s),
+                )
+            ]
+            session.add_all(agent_sessions)
+            session.flush()
+            tool_count = 5 + (i * 2) + s
+            for j in range(tool_count):
+                tname = TOOL_NAMES[j % len(TOOL_NAMES)]
+                topic_key, topic_val = TOOL_TOPICS[j % len(TOOL_TOPICS)]
+                tool = ToolCall(
+                    id=uuid.uuid4(),
+                    session_id=agent_sessions[0].session_id,
+                    agent_id=agent_sessions[0].agent_id,
+                    tool_name=tname,
+                    tool_type="function",
+                    duration_ms=random_between(100, 5000),
+                    tokens_cost=10 + j * 3,
+                    success=j % 5 != 2,
+                    parameters={topic_key: topic_val, "iteration": j},
+                    result_summary=f"Executed {tname} on {topic_val} — {'ok' if j % 5 != 2 else 'error'}",
+                    created_at=_utc_ago(days=7 - i - s, hours=2 + s, minutes=j * 3),
+                )
+                session.add(tool)
 
 
 def random_between(lo: int, hi: int) -> int:
