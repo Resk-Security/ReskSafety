@@ -1,0 +1,39 @@
+# RESK - LLM Firewall (dev)
+# Builds from source, mounts local cores for live editing.
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./resk.db
+      - JWT_SECRET_KEY=dev-secret-change-me
+      - CSRF_SECRET=dev-csrf-secret
+      - COOKIE_SECURE=false
+      - LLM_BACKEND_TYPE=openai
+      - LLM_BACKEND_URL=https://api.openai.com/v1
+      - LLM_BACKEND_API_KEY=
+      - LLM_DEFAULT_MODEL=gpt-4o-mini
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+      - LOG_PROMPTS=false
+      - LOG_LEVEL=DEBUG
+      - RESK2_ENABLED=false
+    volumes:
+      # Mount local cores (editable) - install with: docker exec resk-backend pip install -e /cores/resk-logits /cores/Resk-LLM
+      - ../../resk-logits:/cores/resk-logits:ro
+      - ../../Resk-LLM:/cores/Resk-LLM:ro
+      - backend_data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend_data:

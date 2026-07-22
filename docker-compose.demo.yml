@@ -1,0 +1,30 @@
+# RESK LLM Firewall - Demo (frontend only)
+# Deployed at demo.resk.fr via Traefik
+# Usage: docker compose -f docker-compose.demo.yml up -d --build
+
+name: resk-firewall-demo
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: resk-firewall-demo:latest
+    container_name: resk-firewall-demo
+    restart: unless-stopped
+    networks:
+      - traefik-net
+    volumes:
+      - ./frontend/nginx.demo.conf:/etc/nginx/conf.d/default.conf:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.resk-firewall-demo.rule=Host(`demo.resk.fr`)
+      - traefik.http.routers.resk-firewall-demo.entrypoints=websecure
+      - traefik.http.routers.resk-firewall-demo.tls=true
+      - traefik.http.routers.resk-firewall-demo.tls.certresolver=letsencrypt
+      - traefik.http.routers.resk-firewall-demo.middlewares=secure-chain@file
+      - traefik.http.services.resk-firewall-demo.loadbalancer.server.port=80
+
+networks:
+  traefik-net:
+    external: true

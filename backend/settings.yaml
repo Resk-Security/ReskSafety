@@ -1,0 +1,44 @@
+logits:
+  batch_size: 32
+  default_shadow_penalty: -15.0
+  device: cpu
+  fallback_action: block
+  hot_reload_interval: 60
+  max_sequence_length: 2048
+observability:
+  buffering_max_size: 10000
+  flush_interval_sec: 10
+  mask_sensitive_fields: true
+  sampling_default_rate: 1.0
+pipeline:
+  default_action: allow
+  enable_telemetry: true
+  log_level: info
+  maintenance_mode: false
+scanning:
+  block_on_engine_error: true
+  cache_ttl_sec: 300
+  concurrent_scan_limit: 50
+  enable_caching: true
+  fail_open: false
+  languages:
+  - en
+  - fr
+  log_all_scan_results: true
+  max_input_length: 100000
+  rate_limit_per_sec: 100
+  request_timeout_ms: 5000
+  stop_on_first_match: true
+tokenizers:
+  cache_enabled: true
+  model_tokenizers:
+    deepseek-chat:
+      add_prefix_space: false
+      custom_special_tokens: []
+      detected_special_token_ids: []
+      detected_special_tokens: {}
+      model_name: deepseek-chat
+      tokenizer_name: gpt2
+      trust_remote_code: false
+  protect_special_tokens: true
+  timeout_sec: 30

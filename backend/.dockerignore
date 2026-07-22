@@ -1,0 +1,27 @@
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Local data
+*.db
+data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files (keep secrets out of build context)
+.env
+.env.*
+!.env.production

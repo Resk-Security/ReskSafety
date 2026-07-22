@@ -1,0 +1,82 @@
+# RESK - LLM Firewall (production)
+# Usage:
+#   docker compose up -d              # full stack (backend + frontend + postgres)
+#   docker compose up -d backend db   # headless (no frontend)
+#
+# Override env vars:
+#   JWT_SECRET_KEY=<your-secret> docker compose up -d
+
+name: resk
+
+services:
+  backend:
+    build:
+      context: ./backend
+    image: resk-backend:latest
+    ports:
+      - "8000:8000"
+    environment:
+      # ── Database ──
+      DATABASE_URL: postgresql://resk:${DB_PASSWORD:-reskpass}@db:5432/resk
+
+      # ── Auth ──
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env}
+      CSRF_SECRET: ${CSRF_SECRET:?Set CSRF_SECRET in .env}
+      COOKIE_SECURE: "true"
+
+      # ── LLM Backend ──
+      LLM_BACKEND_TYPE: ${LLM_BACKEND_TYPE:-openai}
+      LLM_BACKEND_URL: ${LLM_BACKEND_URL:-https://api.openai.com/v1}
+      LLM_BACKEND_API_KEY: ${LLM_BACKEND_API_KEY:-}
+      LLM_DEFAULT_MODEL: ${LLM_DEFAULT_MODEL:-gpt-4o-mini}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
+      # ── CORS ──
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+
+      # ── Security ──
+      LOG_PROMPTS: ${LOG_PROMPTS:-false}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
+      RESK2_ENABLED: ${RESK2_ENABLED:-false}
+      PROVIDER_ENCRYPTION_KEY: ${PROVIDER_ENCRYPTION_KEY:?Set PROVIDER_ENCRYPTION_KEY in .env}
+      SECURITY_CONFIG_PATH: ./security.yaml
+
+      # ── reskPoints ──
+      RESKPOINTS_API_KEY: ${RESKPOINTS_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    image: resk-frontend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    profiles:
+      - full
+      - default
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: resk
+      POSTGRES_USER: resk
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-reskpass}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U resk"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:

@@ -1,0 +1,65 @@
+logits:
+  device: cpu
+  enabled: true
+  hot_reload_interval: 60
+  multi_level:
+    enabled: true
+    penalties:
+      high: -20.0
+      low: -5.0
+      medium: -10.0
+  shadow_penalty: -15.0
+observability:
+  buffering:
+    flush_interval: 5.0
+    max_size: 1000
+  enabled: true
+  environment: production
+  masking:
+    enabled: true
+    sensitive_fields:
+    - api_key
+    - password
+    - token
+    - secret
+    - authorization
+  platforms:
+    console:
+      enabled: true
+      format: human
+    datadog:
+      api_key: ''
+      enabled: false
+      site: datadoghq.com
+      tags: ''
+    file:
+      enabled: false
+      path: /var/log/resk/agent_actions.jsonl
+    prometheus:
+      enabled: false
+      job_name: resk
+      pushgateway_url: http://localhost:9091
+    webhook:
+      enabled: false
+      headers: {}
+      url: ''
+  sampling:
+    default_rate: 1.0
+    rules: []
+scanning:
+  block_on_first_threat: true
+  block_score_threshold: 5.0
+  enable_caching: true
+  enabled: true
+  fail_open: false
+  languages:
+  - en
+  - fr
+  max_input_length: 100000
+  min_confidence_threshold: 0.3
+  severity_weights:
+    critical: 10.0
+    high: 7.0
+    info: 0.0
+    low: 1.0
+    medium: 3.0
