@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Layout } from "@/components/layout/Layout";
 import { Login } from "@/pages/Login";
+import { Register } from "@/pages/Register";
 import { Dashboard } from "@/pages/Dashboard";
 import { Users } from "@/pages/Users";
 import { Roles } from "@/pages/Roles";
@@ -35,6 +36,7 @@ export default function App() {
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/" element={<Protected><Dashboard /></Protected>} />
           <Route path="/users" element={<Protected><Users /></Protected>} />
           <Route path="/users/:userId/sessions" element={<Protected><UserSessions /></Protected>} />

@@ -1,10 +1,33 @@
-# RESK LLM Firewall - Demo (frontend only)
+# RESK LLM Firewall - Demo (full stack avec SQLite)
 # Deployed at demo.resk.fr via Traefik
 # Usage: docker compose -f docker-compose.demo.yml up -d --build
 
 name: resk-firewall-demo
 
 services:
+  backend:
+    build:
+      context: ./backend
+    image: resk-firewall-demo-backend:latest
+    container_name: resk-firewall-demo-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: sqlite:///./resk.db
+      JWT_SECRET_KEY: demo-jwt-secret-key-change-in-prod
+      CSRF_SECRET: demo-csrf-secret-change-in-prod
+      COOKIE_SECURE: "false"
+      CORS_ORIGINS: https://demo.resk.fr
+      PROVIDER_ENCRYPTION_KEY: demo-encryption-key-32-bytes-long!!
+      LOG_PROMPTS: "true"
+    networks:
+      - demo-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 3s
+      start_period: 10s
+      retries: 5
+
   frontend:
     build:
       context: ./frontend
@@ -12,7 +35,11 @@ services:
     image: resk-firewall-demo:latest
     container_name: resk-firewall-demo
     restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
     networks:
+      - demo-net
       - traefik-net
     volumes:
       - ./frontend/nginx.demo.conf:/etc/nginx/conf.d/default.conf:ro
@@ -26,5 +53,6 @@ services:
       - traefik.http.services.resk-firewall-demo.loadbalancer.server.port=80
 
 networks:
+  demo-net:
   traefik-net:
     external: true

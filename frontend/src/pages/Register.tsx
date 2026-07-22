@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { MeResponse } from "@/lib/types";
 
-export function Login() {
-  const { login } = useAuth();
+export function Register() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,8 +20,12 @@ export function Login() {
     setLoading(true);
     setErr("");
     try {
-      await login(username, password);
-      navigate("/");
+      await api.post<MeResponse>("/api/auth/register", {
+        username,
+        email,
+        password,
+      });
+      navigate("/login");
     } catch (e) {
       setErr(String(e instanceof Error ? e.message : e));
     } finally {
@@ -35,7 +40,7 @@ export function Login() {
       </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>RESK admin login</CardTitle>
+          <CardTitle>Créer un compte</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
@@ -49,6 +54,15 @@ export function Login() {
               />
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="e">Email</Label>
+              <Input
+                id="e"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="p">Password</Label>
               <Input
                 id="p"
@@ -59,15 +73,12 @@ export function Login() {
             </div>
             {err && <div className="text-destructive text-sm">{err}</div>}
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "…" : "Login"}
+              {loading ? "…" : "Register"}
             </Button>
-            <div className="text-xs text-muted-foreground">
-              Default: <code>admin</code> / <code>changeme</code>
-            </div>
             <div className="text-xs text-center text-muted-foreground">
-              Pas de compte ?{" "}
-              <Link to="/register" className="underline hover:text-foreground">
-                S'inscrire
+              Déjà un compte ?{" "}
+              <Link to="/login" className="underline hover:text-foreground">
+                Se connecter
               </Link>
             </div>
           </form>

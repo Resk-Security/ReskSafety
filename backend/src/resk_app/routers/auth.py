@@ -11,17 +11,50 @@ from sqlalchemy.orm import Session
 from resk_app.auth.cookies import ADMIN_COOKIE, USER_COOKIE, clear_auth_cookie, set_auth_cookie
 from resk_app.auth.dependencies import CurrentAdmin, get_current_admin
 from resk_app.auth.jwt import create_jwt, decode_jwt
-from resk_app.auth.passwords import verify_password
+from resk_app.auth.passwords import hash_password, verify_password
 from resk_app.config import get_settings
 from resk_app.db.session import get_db
 from resk_app.models.user import User
 from resk_app.rbac import compute_user_mask, active_bits
-from resk_app.schemas.auth import LoginRequest, UserMeResponse, UserTokenResponse
+from resk_app.schemas.auth import LoginRequest, RegisterRequest, UserMeResponse, UserTokenResponse
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 def _user_me(user: User) -> UserMeResponse:
+    mask = compute_user_mask(user)
+    return UserMeResponse(
+        id=str(user.id),
+        username=user.username,
+        email=user.email,
+        is_admin=user.is_admin,
+        capabilities_mask=mask,
+        active_bits=active_bits(mask),
+    )
+
+
+@router.post("/register", status_code=201)
+def register(
+    body: RegisterRequest,
+    db: Session = Depends(get_db),
+) -> UserMeResponse:
+    existing = db.scalar(select(User).where(User.username == body.username))
+    if existing is not None:
+        raise HTTPException(status_code=409, detail="Username already taken")
+    existing_email = db.scalar(select(User).where(User.email == body.email))
+    if existing_email is not None:
+        raise HTTPException(status_code=409, detail="Email already taken")
+    user = User(
+        id=uuid.uuid4(),
+        username=body.username,
+        email=body.email,
+        hashed_password=hash_password(body.password),
+        is_active=True,
+        is_admin=False,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
     mask = compute_user_mask(user)
     return UserMeResponse(
         id=str(user.id),
