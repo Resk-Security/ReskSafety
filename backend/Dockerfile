@@ -22,7 +22,8 @@ FROM python:3.13-slim AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    PYTHONPATH=/app/src
 
 WORKDIR /app
 
