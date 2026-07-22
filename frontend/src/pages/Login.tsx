@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
-import { NewsletterPopup } from "@/components/NewsletterPopup";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +33,6 @@ export function Login() {
       <div className="fixed top-0 left-0 w-full bg-amber-500 text-amber-950 text-xs font-semibold text-center py-1 z-50">
         DÉMO — Interface administrateur RESK
       </div>
-      <NewsletterPopup />
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>RESK admin login</CardTitle>
