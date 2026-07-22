@@ -27,6 +27,7 @@ from resk_app.routers import (
     mcp_server_router,
     memory_router,
     models_router,
+    newsletter_router,
     policy_configs_router,
     policies_router,
     policy_rules_router,
@@ -114,6 +115,7 @@ def create_app() -> FastAPI:
     app.include_router(memory_router)
     app.include_router(mcp_router)
     app.include_router(mcp_server_router)
+    app.include_router(newsletter_router)
     app.include_router(models_router)
     app.include_router(providers_router)
     app.include_router(settings_router)

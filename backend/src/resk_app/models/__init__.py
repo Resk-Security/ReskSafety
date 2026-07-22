@@ -7,6 +7,7 @@ from resk_app.models.log import RequestLog
 from resk_app.models.mcp import McpServer
 from resk_app.models.memory import MemoryEntry
 from resk_app.models.model import Model
+from resk_app.models.newsletter import NewsletterSubscriber
 from resk_app.models.policy import Policy
 from resk_app.models.policy_config import PolicyConfig
 from resk_app.models.policy_rule import PolicyRule, policy_policy_rules
@@ -17,7 +18,7 @@ from resk_app.models.use_case import UseCaseConfig
 from resk_app.models.user import User
 
 __all__ = [
-    "Capability", "ChangeLog", "Model", "Policy", "PolicyConfig", "PolicyRule", "policy_policy_rules",
-    "Provider", "Role", "UseCaseConfig", "User", "RequestLog",
-    "AgentSession", "ToolCall",
+    "Capability", "ChangeLog", "Model", "NewsletterSubscriber", "Policy", "PolicyConfig",
+    "PolicyRule", "policy_policy_rules", "Provider", "Role", "UseCaseConfig", "User",
+    "RequestLog", "AgentSession", "ToolCall",
 ]

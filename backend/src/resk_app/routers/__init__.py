@@ -6,6 +6,7 @@ from resk_app.routers.capabilities import router as capabilities_router
 from resk_app.routers.firewall import router as firewall_router
 from resk_app.routers.hooks import router as hooks_router
 from resk_app.routers.mcp import router as mcp_router
+from resk_app.routers.newsletter import router as newsletter_router
 from resk_app.routers.mcp_server import router as mcp_server_router
 from resk_app.routers.memory import router as memory_router
 from resk_app.routers.models import router as models_router
@@ -30,6 +31,7 @@ __all__ = [
     "mcp_server_router",
     "memory_router",
     "models_router",
+    "newsletter_router",
     "policy_configs_router",
     "policies_router",
     "policy_rules_router",

@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
 
     # CORS
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://resk.fr,https://demo.resk.fr"
 
     # Logging
     LOG_PROMPTS: bool = False
@@ -66,6 +66,9 @@ class Settings(BaseSettings):
 
     # reskPoints
     RESKPOINTS_API_KEY: str = ""
+
+    # Newsletter / Resend
+    RESEND_API_KEY: str = ""
 
     @field_validator("CORS_ORIGINS")
     @classmethod
