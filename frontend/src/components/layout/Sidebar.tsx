@@ -49,7 +49,7 @@ const nav: NavItem[] = [
     label: "Integrations", icon: Puzzle,
     children: [
       { to: "/integrations/mcp", label: "MCP Servers", icon: Server },
-      { to: "/integrations/tools", label: "MCP Tools", icon: Wrench },
+      { to: "/integrations/tools", label: "Tools & Capabilities", icon: Wrench },
     ],
   },
   { to: "/memory", label: "Memory", icon: Brain },

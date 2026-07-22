@@ -164,11 +164,11 @@ export function Dashboard() {
     }],
   } : null;
 
-  const rulesData = stats && Object.keys(stats.by_rule).length ? {
-    labels: Object.keys(stats.by_rule).slice(0, 10),
+  const rulesData = stats && Object.keys(stats.by_policy ?? {}).length ? {
+    labels: Object.keys(stats.by_policy).slice(0, 10),
     datasets: [{
       label: "Blocked",
-      data: Object.values(stats.by_rule).slice(0, 10),
+      data: Object.values(stats.by_policy).slice(0, 10),
       backgroundColor: chartColors.blocked,
     }],
   } : null;

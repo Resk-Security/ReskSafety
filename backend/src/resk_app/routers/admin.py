@@ -76,6 +76,14 @@ def stats(
     ).all()
     by_rule = {(r or "unknown"): c for r, c in by_rule_rows}
 
+    by_policy_rows = db.execute(
+        select(Policy.name, func.count(RequestLog.id))
+        .join(RequestLog, RequestLog.policy_id == Policy.id)
+        .where(RequestLog.status == "blocked")
+        .group_by(Policy.name)
+    ).all()
+    by_policy = {p: c for p, c in by_policy_rows}
+
     return StatsResponse(
         total_requests=total,
         blocked_requests=blocked,
@@ -84,6 +92,7 @@ def stats(
         blocked_ratio=(blocked / total) if total else 0.0,
         by_user=by_user,
         by_rule=by_rule,
+        by_policy=by_policy,
     )
 
 

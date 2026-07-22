@@ -176,6 +176,7 @@ export interface Stats {
   blocked_ratio: number;
   by_user: Record<string, number>;
   by_rule: Record<string, number>;
+  by_policy: Record<string, number>;
 }
 
 export interface SessionData {

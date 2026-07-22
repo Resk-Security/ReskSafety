@@ -1,122 +1,136 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
-import type { McpServer, Role } from "@/lib/types";
+import type { Capability, Role } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, Badge, ErrorAlert } from "@/components/ui";
-import { Server, Wrench, ChevronDown, ChevronRight } from "lucide-react";
+import { Check, X, Wrench, Database, Mail, Lock, Shield, Terminal, Users } from "lucide-react";
+
+interface Category {
+  label: string;
+  icon: any;
+  bits: number[];
+}
+
+const CATEGORIES: Category[] = [
+  { label: "Tool Access", icon: Terminal, bits: [0, 1] },
+  { label: "Data Access", icon: Database, bits: [2, 3] },
+  { label: "Communication", icon: Mail, bits: [4] },
+  { label: "Privacy", icon: Lock, bits: [5] },
+  { label: "Administration", icon: Users, bits: [6, 7] },
+];
+
+const BIT_NAMES: Record<number, string> = {
+  0: "Call functions/tools",
+  1: "Generate executable code",
+  2: "Read database",
+  3: "Write to database",
+  4: "Send emails",
+  5: "Access personal data",
+  6: "Manage users",
+  7: "Modify configuration",
+};
 
 export function McpToolsPage() {
-  const navigate = useNavigate();
-  const [servers, setServers] = useState<McpServer[]>([]);
-  const [toolsMap, setToolsMap] = useState<Record<string, any[]>>({});
+  const [caps, setCaps] = useState<Capability[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [err, setErr] = useState("");
 
   async function load() {
     try {
-      const [srv, rls] = await Promise.all([
-        api.get<McpServer[]>("/api/mcp/servers"),
+      const [c, r] = await Promise.all([
+        api.get<Capability[]>("/api/capabilities"),
         api.get<Role[]>("/api/roles"),
       ]);
-      setServers(srv);
-      setRoles(rls);
-      for (const s of srv) {
-        try {
-          const res = await api.get<{ tools: any[] }>(`/api/mcp/servers/${s.id}/tools`);
-          setToolsMap((prev) => ({ ...prev, [s.id]: res.tools }));
-        } catch {}
-      }
-    } catch (e) { setErr(String(e)); }
+      setCaps(c);
+      setRoles(r);
+    } catch (e) {
+      setErr(String(e));
+    }
   }
 
   useEffect(() => { load(); }, []);
 
-  function toggleServer(id: string) {
-    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
-  }
-
-  function isToolAllowed(serverId: string, toolName: string): Role[] {
-    const entry = `${serverId}:${toolName}`;
-    return roles.filter((r) => (r.mcp_tool_allowlist ?? []).includes(entry));
+  function hasBit(role: Role, bit: number): boolean {
+    return ((role.capabilities_mask ?? 0) & (1 << bit)) !== 0;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">MCP Tools</h1>
+          <h1 className="text-2xl font-semibold">Tools & Capabilities</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Browse tools exposed by MCP servers and see which roles have access.
+            Capabilities grouped by category and their assignment across roles.
           </p>
         </div>
       </div>
 
       <ErrorAlert message={err} />
 
-      {servers.length === 0 && (
-        <Card>
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            No MCP servers configured. <button className="underline text-primary hover:text-primary/80 text-sm" onClick={() => navigate("/integrations/mcp")}>Add one</button>.
-          </CardContent>
-        </Card>
-      )}
-
-      {servers.map((srv) => {
-        const open = expanded[srv.id] ?? true;
-        const tools = toolsMap[srv.id] ?? [];
+      {CATEGORIES.map((cat) => {
+        const catCaps = caps.filter((c) => cat.bits.includes(c.bit_position));
+        if (catCaps.length === 0) return null;
         return (
-          <Card key={srv.id}>
-            <CardHeader className="pb-2 cursor-pointer" onClick={() => toggleServer(srv.id)}>
-              <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                <Server className="h-4 w-4 text-muted-foreground" />
-                {srv.name}
-                <Badge variant="outline" className="text-[10px] ml-1">{srv.trust_level}</Badge>
-                <span className="text-xs text-muted-foreground ml-auto">{tools.length} tool{tools.length > 1 ? "s" : ""}</span>
+          <Card key={cat.label}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <cat.icon className="h-5 w-5 text-muted-foreground" />
+                {cat.label}
               </CardTitle>
             </CardHeader>
-            {open && (
-              <CardContent>
-                {tools.length === 0 && <p className="text-xs text-muted-foreground">No tools available or loading...</p>}
-                {tools.map((t: any, i: number) => {
-                  const name = t.name ?? t.function?.name ?? `tool_${i}`;
-                  const allowedRoles = isToolAllowed(srv.id, name);
-                  return (
-                    <div key={name} className="flex items-start gap-3 border-b py-2 last:border-0">
-                      <Wrench className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium">{name}</div>
-                        {t.description && <p className="text-xs text-muted-foreground truncate">{t.description}</p>}
-                        {t.input_schema?.properties && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {Object.keys(t.input_schema.properties).slice(0, 4).map((k) => (
-                              <Badge key={k} variant="outline" className="text-[10px]">{k}</Badge>
-                            ))}
-                            {Object.keys(t.input_schema.properties).length > 4 && (
-                              <span className="text-[10px] text-muted-foreground">+{Object.keys(t.input_schema.properties).length - 4}</span>
-                            )}
-                          </div>
-                        )}
+            <CardContent className="pt-0">
+              <div className="divide-y">
+                {catCaps.map((cap) => (
+                  <div key={cap.bit_position} className="flex items-center gap-4 py-2.5 first:pt-0 last:pb-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Wrench className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm font-medium">{cap.name}</span>
+                        <Badge variant="outline" className="text-[10px] font-mono">
+                          bit {cap.bit_position}
+                        </Badge>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <div className="text-[10px] text-muted-foreground mb-1">Allowed roles</div>
-                        <div className="flex flex-wrap gap-1 justify-end">
-                          {allowedRoles.length === 0 && <span className="text-[10px] text-muted-foreground/50">none</span>}
-                          {allowedRoles.slice(0, 3).map((r) => (
-                            <Badge key={r.id} variant="secondary" className="text-[10px]">{r.name}</Badge>
-                          ))}
-                          {allowedRoles.length > 3 && <span className="text-[10px] text-muted-foreground">+{allowedRoles.length - 3}</span>}
-                        </div>
-                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 ml-6">
+                        {BIT_NAMES[cap.bit_position] || cap.description || "\u2014"}
+                      </p>
                     </div>
-                  );
-                })}
-              </CardContent>
-            )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {roles.map((role) => (
+                        <div
+                          key={role.id}
+                          className="flex flex-col items-center gap-0.5 min-w-[72px]"
+                        >
+                          <span className="text-[9px] text-muted-foreground truncate max-w-[72px] text-center leading-tight">
+                            {role.name}
+                          </span>
+                          {hasBit(role, cap.bit_position) ? (
+                            <Check className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <X className="h-4 w-4 text-muted-foreground/30" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
           </Card>
         );
       })}
+
+      {caps.length === 0 && !err && (
+        <Card>
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            No capabilities defined. Create them in{" "}
+            <button
+              className="underline text-primary hover:text-primary/80"
+              onClick={() => window.location.href = "/roles"}
+            >
+              Roles &rarr; Tools & Permissions
+            </button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

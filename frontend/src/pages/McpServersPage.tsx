@@ -1,28 +1,31 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import {
   Button, Input, Label, Table, TBody, TD, TH, THead, TR,
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
   Badge, Card, CardContent, ErrorAlert,
 } from "@/components/ui";
-import { Plus, Trash2, Pencil, Play, Globe } from "lucide-react";
-import type { McpServer, McpToolResult } from "@/lib/types";
+import { Plus, Trash2, Pencil, Play, Globe, ChevronDown, ChevronRight, Wrench } from "lucide-react";
+import type { McpServer, Role } from "@/lib/types";
 
 export function McpServersPage() {
   const [servers, setServers] = useState<McpServer[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [err, setErr] = useState("");
-  const [tools, setTools] = useState<any[] | null>(null);
-  const [toolsServerId, setToolsServerId] = useState<string | null>(null);
+  const [toolsMap, setToolsMap] = useState<Record<string, any[]>>({});
+  const [expandedServers, setExpandedServers] = useState<Record<string, boolean>>({});
+  const [roles, setRoles] = useState<Role[]>([]);
 
   const [form, setForm] = useState({
     name: "", endpoint: "", auth_type: "none", api_key: "",
     trust_level: "sandboxed", allowed_tools: "", is_active: true,
   });
 
-  const load = () =>
+  const load = () => {
     api.get<McpServer[]>("/api/mcp/servers").then(setServers).catch(() => {});
+    api.get<Role[]>("/api/roles").then(setRoles).catch(() => {});
+  };
 
   useEffect(() => { load(); }, []);
 
@@ -75,12 +78,17 @@ export function McpServersPage() {
     } catch (e: any) { alert(`Error: ${e?.message || e}`); }
   };
 
-  const showTools = async (id: string) => {
-    try {
-      const res = await api.get<{ server_id: string; server_name: string; tools: any[] }>(`/api/mcp/servers/${id}/tools`);
-      setTools(res.tools);
-      setToolsServerId(id);
-    } catch { setTools([]); }
+  const toggleServerTools = async (id: string) => {
+    const next = { ...expandedServers, [id]: !expandedServers[id] };
+    if (!expandedServers[id] && !toolsMap[id]) {
+      try {
+        const res = await api.get<{ server_id: string; server_name: string; tools: any[] }>(`/api/mcp/servers/${id}/tools`);
+        setToolsMap((prev) => ({ ...prev, [id]: res.tools }));
+      } catch {
+        setToolsMap((prev) => ({ ...prev, [id]: [] }));
+      }
+    }
+    setExpandedServers(next);
   };
 
   const trustBadge = (level: string) => {
@@ -119,57 +127,84 @@ export function McpServersPage() {
           </THead>
           <TBody>
             {servers.map((s) => (
-              <TR key={s.id}>
-                <TD className="font-medium">{s.name}</TD>
-                <TD className="max-w-[200px] truncate font-mono text-xs">{s.endpoint}</TD>
-                <TD>{trustBadge(s.trust_level)}</TD>
-                <TD>
-                  <Button variant="ghost" size="sm" onClick={() => showTools(s.id)} className="text-xs gap-1">
-                    <Globe className="h-3 w-3" />
-                    {s.allowed_tools?.length ?? "?"} tools
-                  </Button>
-                </TD>
-                <TD><Badge variant={s.is_active ? "default" : "destructive"}>{s.is_active ? "active" : "inactive"}</Badge></TD>
-                <TD>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => testConn(s.id)} title="Test connection">
-                      <Play className="h-4 w-4" />
+              <React.Fragment key={s.id}>
+                <TR>
+                  <TD className="font-medium">{s.name}</TD>
+                  <TD className="max-w-[200px] truncate font-mono text-xs">{s.endpoint}</TD>
+                  <TD>{trustBadge(s.trust_level)}</TD>
+                  <TD>
+                    <Button variant="ghost" size="sm" onClick={() => toggleServerTools(s.id)} className="text-xs gap-1">
+                      {expandedServers[s.id] ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                      <Globe className="h-3 w-3" />
+                      {toolsMap[s.id]?.length ?? s.allowed_tools?.length ?? "?"} tools
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => openEdit(s)} title="Edit">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => remove(s.id)} title="Delete">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TD>
-              </TR>
+                  </TD>
+                  <TD><Badge variant={s.is_active ? "default" : "destructive"}>{s.is_active ? "active" : "inactive"}</Badge></TD>
+                  <TD>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => testConn(s.id)} title="Test connection">
+                        <Play className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(s)} title="Edit">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => remove(s.id)} title="Delete">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TD>
+                </TR>
+                {expandedServers[s.id] && (
+                  <TR key={`${s.id}-tools`}>
+                    <TD colSpan={6} className="bg-muted/20 p-0">
+                      <div className="px-6 py-3 space-y-2 max-h-60 overflow-auto">
+                        {(toolsMap[s.id] ?? []).length === 0 && (
+                          <p className="text-xs text-muted-foreground py-2">No tools exposed or server unreachable.</p>
+                        )}
+                        {(toolsMap[s.id] ?? []).map((t: any, i: number) => {
+                          const name = t.name ?? t.function?.name ?? `tool_${i}`;
+                          return (
+                            <div key={name} className="flex items-start gap-3 py-1.5 border-b last:border-0">
+                              <Wrench className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium">{name}</div>
+                                {t.description && <p className="text-xs text-muted-foreground truncate">{t.description}</p>}
+                                {t.input_schema?.properties && (
+                                  <div className="mt-1 flex flex-wrap gap-1">
+                                    {Object.keys(t.input_schema.properties).slice(0, 4).map((k: string) => (
+                                      <Badge key={k} variant="outline" className="text-[10px]">{k}</Badge>
+                                    ))}
+                                    {Object.keys(t.input_schema.properties).length > 4 && (
+                                      <span className="text-[10px] text-muted-foreground">+{Object.keys(t.input_schema.properties).length - 4}</span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="shrink-0 text-right">
+                                <div className="text-[10px] text-muted-foreground mb-1">Allowed roles</div>
+                                <div className="flex flex-wrap gap-1 justify-end">
+                                  {(() => {
+                                    const entry = `${s.id}:${name}`;
+                                    const allowed = roles.filter((r) => (r.mcp_tool_allowlist ?? []).includes(entry));
+                                    return allowed.length === 0
+                                      ? <span className="text-[10px] text-muted-foreground/50">none</span>
+                                      : allowed.slice(0, 3).map((r) => (
+                                          <Badge key={r.id} variant="secondary" className="text-[10px]">{r.name}</Badge>
+                                        ));
+                                  })()}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </TD>
+                  </TR>
+                )}
+              </React.Fragment>
             ))}
           </TBody>
         </Table>
-      )}
-
-      {tools !== null && (
-        <Dialog open={!!tools} onOpenChange={(v) => { if (!v) { setTools(null); setToolsServerId(null); } }}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader><DialogTitle>Tools — {servers.find(s => s.id === toolsServerId)?.name ?? ""}</DialogTitle></DialogHeader>
-            {tools.length === 0 && <p className="text-sm text-muted-foreground">No tools exposed or server unreachable.</p>}
-            {tools.length > 0 && (
-              <div className="space-y-2 max-h-60 overflow-auto">
-                {tools.map((t: any, i: number) => (
-                  <div key={i} className="rounded border p-2 text-sm">
-                    <div className="font-medium">{t.name ?? t.function?.name ?? `tool_${i}`}</div>
-                    {t.description && <div className="text-xs text-muted-foreground mt-0.5">{t.description}</div>}
-                    {t.input_schema && <pre className="text-[10px] mt-1 bg-muted p-1 rounded overflow-auto max-h-20"><code>{JSON.stringify(t.input_schema, null, 1)}</code></pre>}
-                  </div>
-                ))}
-              </div>
-            )}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => { setTools(null); setToolsServerId(null); }}>Close</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       )}
 
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>

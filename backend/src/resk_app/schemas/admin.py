@@ -15,6 +15,7 @@ class StatsResponse(BaseModel):
     blocked_ratio: float
     by_user: dict[str, int] = {}
     by_rule: dict[str, int] = {}
+    by_policy: dict[str, int] = {}
 
 
 class LogFilter(BaseModel):
