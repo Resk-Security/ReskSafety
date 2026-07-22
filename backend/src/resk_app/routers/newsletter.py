@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from resk_app.auth.dependencies import get_current_admin
 from resk_app.config import get_settings
 from resk_app.db.session import get_db
+from resk_app.limiter import limiter
 from resk_app.models.newsletter import NewsletterSubscriber
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ class NewsletterSubscribeRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=128)
     email: EmailStr
     company: str | None = Field(None, max_length=128)
+    _website: str | None = Field(None, max_length=256)
 
 
 class NewsletterSubscribeResponse(BaseModel):
@@ -47,11 +49,10 @@ def _send_welcome_email(email: str, name: str) -> bool:
                 "Content-Type": "application/json",
             },
             json={
-                "from": "ReskLayer <waitlist@resk.fr>",
+                "from": "ReskLayer <contact@resk.fr>",
                 "to": [email],
                 "subject": "Welcome to the ReskLayer Waitlist",
-                "html": f"""
-<h2>Welcome to ReskLayer, {name}!</h2>
+                "html": f"""<h2>Welcome to ReskLayer, {name}!</h2>
 <p>Thank you for joining the ReskLayer waitlist. You're now among the first to know about:</p>
 <ul>
   <li><strong>Early access</strong> to the ReskLayer platform</li>
@@ -60,8 +61,7 @@ def _send_welcome_email(email: str, name: str) -> bool:
   <li><strong>Exclusive content</strong> on AI security best practices</li>
 </ul>
 <p>In the meantime, try the <a href="https://demo.resk.fr">live demo</a> or check out the <a href="https://github.com/Resk-Security/Resk">source code on GitHub</a>.</p>
-<p>— The ReskLayer Team</p>
-""",
+<p>— The ReskLayer Team</p>""",
             },
             timeout=15,
         )
@@ -75,7 +75,16 @@ def _send_welcome_email(email: str, name: str) -> bool:
 
 
 @router.post("/subscribe", response_model=NewsletterSubscribeResponse)
-def subscribe(req: NewsletterSubscribeRequest, db: Session = Depends(get_db)):  # noqa: B008
+@limiter.limit("5/minute")
+def subscribe(
+    req: NewsletterSubscribeRequest,
+    request: Request,  # noqa: ARG001 - required by slowapi
+    db: Session = Depends(get_db),  # noqa: B008
+):
+    if req._website:
+        logger.warning("Honeypot triggered — bot detected on subscribe: %s", req.email)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request.")
+
     existing = db.execute(
         select(NewsletterSubscriber).where(NewsletterSubscriber.email == req.email)
     ).scalar_one_or_none()
@@ -111,9 +120,13 @@ def list_subscribers(
     _admin=Depends(get_current_admin),  # noqa: B008
 ):
     """List all subscribers (admin only)."""
-    subscribers = db.execute(
-        select(NewsletterSubscriber).order_by(NewsletterSubscriber.created_at.desc())
-    ).scalars().all()
+    subscribers = (
+        db.execute(
+            select(NewsletterSubscriber).order_by(NewsletterSubscriber.created_at.desc())
+        )
+        .scalars()
+        .all()
+    )
 
     return [
         {

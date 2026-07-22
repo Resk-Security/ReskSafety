@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite:///./resk.db
+      - DATABASE_URL=sqlite:///./data/resk.db
       - JWT_SECRET_KEY=dev-secret-change-me
       - CSRF_SECRET=dev-csrf-secret
       - COOKIE_SECURE=false
