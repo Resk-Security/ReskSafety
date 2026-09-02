@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "resk-app"
 version = "0.1.0"
-description = "RESK - Deployable LLM firewall application with RBAC, policies and admin console"
+description = "ReskSafety - Deployable LLM firewall application with RBAC, policies and admin console"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

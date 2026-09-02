@@ -1,4 +1,4 @@
-# RESK — Deployable LLM Firewall
+# ReskSafety — Deployable LLM Firewall
 
 RESK is a full-stack application (FastAPI + React) that provides:
 
