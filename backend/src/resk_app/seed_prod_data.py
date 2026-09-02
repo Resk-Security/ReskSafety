@@ -21,6 +21,7 @@ from resk_app.models.user import User, user_roles
 from resk_app.rbac.capabilities import build_mask, Capability as C
 
 USERS = {
+    "demo": {"email": "demo@demo.resk.fr", "password": "demo1234", "is_admin": True, "role": "root"},
     "alice": {"email": "alice@demo.resk.fr", "password": "demo1234", "is_admin": False, "role": "reader"},
     "bob": {"email": "bob@demo.resk.fr", "password": "demo1234", "is_admin": False, "role": "operator"},
     "carol": {"email": "carol@demo.resk.fr", "password": "demo1234", "is_admin": False, "role": "developer"},

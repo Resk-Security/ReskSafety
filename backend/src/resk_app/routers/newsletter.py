@@ -23,7 +23,7 @@ router = APIRouter(prefix="/api/newsletter", tags=["newsletter"])
 class NewsletterSubscribeRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    name: str = Field(..., min_length=1, max_length=128)
+    name: str = Field("", max_length=128)
     email: EmailStr
     company: str | None = Field(None, max_length=128)
     website: str | None = Field(None, max_length=256, alias="_website")
@@ -76,6 +76,47 @@ def _send_welcome_email(email: str, name: str) -> bool:
         return False
 
 
+def _send_owner_notification(name: str, email: str, company: str | None) -> bool:
+    """Notify the team that a new subscriber signed up (includes their email)."""
+    settings = get_settings()
+    if not settings.RESEND_API_KEY:
+        logger.warning(
+            "RESEND_API_KEY not set — skipping owner notification for new subscriber %s <%s>",
+            name, email,
+        )
+        return False
+
+    try:
+        import httpx
+
+        resp = httpx.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": "ReskSafety Demo <contact@resk.fr>",
+                "to": [settings.NOTIFY_EMAIL],
+                "subject": f"New demo signup: {email}",
+                "html": f"""<h2>New newsletter signup on demo.resk.fr</h2>
+<ul>
+  <li><strong>Name:</strong> {name}</li>
+  <li><strong>Email:</strong> {email}</li>
+  <li><strong>Company:</strong> {company or "—"}</li>
+</ul>""",
+            },
+            timeout=15,
+        )
+        if resp.is_error:
+            logger.error("Resend owner notification error: %s %s", resp.status_code, resp.text)
+            return False
+        return True
+    except Exception as exc:
+        logger.error("Failed to send owner notification: %s", exc)
+        return False
+
+
 @router.post("/subscribe", response_model=NewsletterSubscribeResponse)
 @limiter.limit("5/minute")
 def subscribe(
@@ -97,8 +138,9 @@ def subscribe(
             detail="This email is already on the waitlist.",
         )
 
+    subscriber_name = req.name.strip() or "there"
     subscriber = NewsletterSubscriber(
-        name=req.name,
+        name=subscriber_name,
         email=req.email,
         company=req.company or None,
     )
@@ -106,9 +148,10 @@ def subscribe(
     db.commit()
     db.refresh(subscriber)
 
-    logger.info("New newsletter subscriber: %s <%s>", req.name, req.email)
+    logger.info("New newsletter subscriber: %s <%s>", subscriber_name, req.email)
 
-    _send_welcome_email(req.email, req.name)
+    _send_welcome_email(req.email, subscriber_name)
+    _send_owner_notification(subscriber_name, req.email, req.company)
 
     return NewsletterSubscribeResponse(
         message="You've been added to the ReskLayer waitlist!",

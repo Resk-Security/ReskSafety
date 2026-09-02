@@ -69,6 +69,7 @@ class Settings(BaseSettings):
 
     # Newsletter / Resend
     RESEND_API_KEY: str = ""
+    NOTIFY_EMAIL: str = "contact@resk.fr"
 
     @field_validator("CORS_ORIGINS")
     @classmethod

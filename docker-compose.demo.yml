@@ -16,7 +16,7 @@ services:
       JWT_SECRET_KEY: demo-jwt-secret-key-change-in-prod
       CSRF_SECRET: demo-csrf-secret-change-in-prod
       COOKIE_SECURE: "true"
-      CORS_ORIGINS: https://demo.resk.fr
+      CORS_ORIGINS: https://demo.resk.fr,https://resk.fr,https://www.resk.fr
       PROVIDER_ENCRYPTION_KEY: demo-encryption-key-32-bytes-long!!
       LOG_PROMPTS: "true"
     networks:
